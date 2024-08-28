@@ -1,0 +1,213 @@
+<!DOCTYPE html>
+<html lang="he" dir="ltr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>מחשבון מדעי משופר</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            margin: 0;
+            background-color: #f0f0f0;
+        }
+        .calculator {
+            background-color: #fff;
+            border-radius: 10px;
+            box-shadow: 0 0 10px rgba(0,0,0,0.1);
+            padding: 20px;
+            width: 400px;
+        }
+        #display {
+            width: 100%;
+            height: 50px;
+            font-size: 24px;
+            text-align: right;
+            margin-bottom: 10px;
+            padding: 5px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+        }
+        .buttons {
+            display: grid;
+            grid-template-columns: repeat(5, 1fr);
+            gap: 10px;
+        }
+        button {
+            padding: 15px 5px;
+            font-size: 16px;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            transition: background-color 0.3s;
+        }
+        button:hover {
+            opacity: 0.8;
+        }
+        .number { background-color: #4CAF50; color: white; }
+        .operator { background-color: #2196F3; color: white; }
+        .equals { background-color: #FF9800; color: white; grid-column: span 2; }
+        .clear { background-color: #f44336; color: white; }
+        .function { background-color: #9C27B0; color: white; }
+    </style>
+</head>
+<body>
+    <div class="calculator">
+        <input type="text" id="display" readonly>
+        <div class="buttons">
+            <!-- פונקציות מדעיות -->
+            <button class="function">sin</button>
+            <button class="function">cos</button>
+            <button class="function">tan</button>
+            <button class="function">log</button>
+            <button class="function">ln</button>
+            
+            <button class="function">√</button>
+            <button class="function">x²</button>
+            <button class="function">x³</button>
+            <button class="operator">^</button>
+            <button class="operator">(</button>
+            
+            <!-- מספרים וסימנים בסיסיים -->
+            <button class="number">1</button>
+            <button class="number">2</button>
+            <button class="number">3</button>
+            <button class="operator">/</button>
+            <button class="operator">)</button>
+            
+            <button class="number">4</button>
+            <button class="number">5</button>
+            <button class="number">6</button>
+            <button class="operator">*</button>
+            <button class="function">π</button>
+            
+            <button class="number">7</button>
+            <button class="number">8</button>
+            <button class="number">9</button>
+            <button class="operator">-</button>
+            <button class="function">e</button>
+            
+            <button class="number">0</button>
+            <button class="number">.</button>
+            <button class="clear">C</button>
+            <button class="operator">+</button>
+            <button class="equals">=</button>
+        </div>
+    </div>
+
+    <script>
+        let display = document.getElementById('display');
+        let buttons = document.getElementsByTagName('button');
+
+        for (let button of buttons) {
+            button.addEventListener('click', function() {
+                let value = this.innerText;
+
+                if (value >= '0' && value <= '9' || value === '.') {
+                    display.value += value;
+                } else if (value === 'C') {
+                    display.value = '';
+                } else if (value === '=') {
+                    try {
+                        let result = evaluateExpression(display.value);
+                        display.value = result;
+                    } catch (error) {
+                        display.value = 'Error';
+                    }
+                } else if (value === 'π') {
+                    display.value += Math.PI.toFixed(10);
+                } else if (value === 'e') {
+                    display.value += Math.E.toFixed(10);
+                } else if (['sin', 'cos', 'tan', 'log', 'ln', '√'].includes(value)) {
+                    display.value += value + '(';
+                } else if (value === 'x²') {
+                    display.value += '^2';
+                } else if (value === 'x³') {
+                    display.value += '^3';
+                } else {
+                    display.value += value;
+                }
+            });
+        }
+
+        function evaluateExpression(expression) {
+            const mathFunctions = {
+                sin: Math.sin,
+                cos: Math.cos,
+                tan: Math.tan,
+                log: Math.log10,
+                ln: Math.log,
+                '√': Math.sqrt,
+                '^': Math.pow
+            };
+
+            // Replace π and e with their values
+            expression = expression.replace(/π/g, Math.PI.toString())
+                                   .replace(/e/g, Math.E.toString());
+
+            // Evaluate the expression using a recursive descent parser
+            function parse(str) {
+                let pos = 0;
+                
+                function parseNumber() {
+                    let num = '';
+                    while (/[0-9.]/.test(str[pos])) {
+                        num += str[pos++];
+                    }
+                    return parseFloat(num);
+                }
+
+                function parseFactor() {
+                    if (str[pos] === '(') {
+                        pos++;
+                        let result = parseExpression();
+                        pos++; // Skip closing parenthesis
+                        return result;
+                    } else if (/[a-z√]/.test(str[pos])) {
+                        let func = '';
+                        while (/[a-z√]/.test(str[pos])) {
+                            func += str[pos++];
+                        }
+                        pos++; // Skip opening parenthesis
+                        let arg = parseExpression();
+                        pos++; // Skip closing parenthesis
+                        return mathFunctions[func](arg);
+                    } else {
+                        return parseNumber();
+                    }
+                }
+
+                function parseTerm() {
+                    let left = parseFactor();
+                    while (str[pos] === '^') {
+                        pos++;
+                        let right = parseFactor();
+                        left = Math.pow(left, right);
+                    }
+                    return left;
+                }
+
+                function parseExpression() {
+                    let left = parseTerm();
+                    while (str[pos] === '+' || str[pos] === '-' || str[pos] === '*' || str[pos] === '/') {
+                        let op = str[pos++];
+                        let right = parseTerm();
+                        if (op === '+') left += right;
+                        else if (op === '-') left -= right;
+                        else if (op === '*') left *= right;
+                        else left /= right;
+                    }
+                    return left;
+                }
+
+                return parseExpression();
+            }
+
+            return parse(expression);
+        }
+    </script>
+</body>
+</html>
